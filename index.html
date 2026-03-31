@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Parkir otomatis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6 text-gray-800">Log Akses Kendaraan</h1>
+        
+        <div class="bg-white shadow-md rounded-lg overflow-hidden">
+            <table class="min-w-full leading-normal">
+                <thead>
+                    <tr class="bg-blue-600 text-white">
+                        <th class="px-5 py-3 border-b-2 text-left text-xs font-semibold uppercase tracking-wider">Nama</th>
+                        <th class="px-5 py-3 border-b-2 text-left text-xs font-semibold uppercase tracking-wider">NIM</th>
+                        <th class="px-5 py-3 border-b-2 text-left text-xs font-semibold uppercase tracking-wider">Plat Nomor</th>
+                        <th class="px-5 py-3 border-b-2 text-left text-xs font-semibold uppercase tracking-wider">Jam Masuk</th>
+                        <th class="px-5 py-3 border-b-2 text-left text-xs font-semibold uppercase tracking-wider">Jam Keluar</th>
+                    </tr>
+                </thead>
+                <tbody id="data-tabel">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+ 
+        // Konfigurasi Supabase
+        const SUPABASE_URL ='https://hfvizwgbdpzefgqebrue.supabase.co';
+        const SUPABASE_KEY =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhmdml6d2diZHB6ZWZncWVicnVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1OTgzMjQsImV4cCI6MjA4OTE3NDMyNH0.K2lkcuzFhGtIdmBlYU_pvVg60GM-Omnl2G2_CGgnD8k;
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function fetchLogs() {
+            let { data, error } = await supabase
+                .from('log_parkir')
+                .select('*')
+                .order('jam_masuk', { ascending: false });
+
+            if (error) console.log('Error:', error);
+            else renderTable(data);
+        }
+
+        function renderTable(logs) {
+            const tbody = document.getElementById('data-tabel');
+            tbody.innerHTML = '';
+            logs.forEach(log => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">${log.nama}</td>
+                        <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">${log.nim}</td>
+                        <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">${log.plat_nomor}</td>
+                        <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">${new Date(log.jam_masuk).toLocaleString('id-ID')}</td>
+                        <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">${log.jam_keluar ? new Date(log.jam_keluar).toLocaleString('id-ID') : '-'}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Jalankan fungsi saat web dibuka
+        fetchLogs();
+        
+        // Update otomatis setiap 5 detik
+        setInterval(fetchLogs, 5000);
+    </script>
+</body>
+</html>
