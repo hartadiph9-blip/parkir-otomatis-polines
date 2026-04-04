@@ -31,8 +31,12 @@
     <script>
  
         // Konfigurasi Supabase
-        const SUPABASE_URL ='https://hfvizwgbdpzefgqebrue.supabase.co';
-        const SUPABASE_KEY =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhmdml6d2diZHB6ZWZncWVicnVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1OTgzMjQsImV4cCI6MjA4OTE3NDMyNH0.K2lkcuzFhGtIdmBlYU_pvVg60GM-Omnl2G2_CGgnD8k;
+       const supabaseUrl = process.env.SUPABASE_URL;
+        const supabaseKey = process.env.SUPABASE_ANON_KEY;
+        if (!supabaseUrl || !supabaseKey) {
+    console.error("❌ Error: SUPABASE_URL atau SUPABASE_ANON_KEY belum di-set di file .env");
+    process.exit(1);
+}
         const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         async function fetchLogs() {
