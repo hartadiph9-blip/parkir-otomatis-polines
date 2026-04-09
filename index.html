@@ -3,73 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Parkir otomatis</title>
+    <title>SCADA Parkir - Polines</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Animasi kedip untuk status Live */
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .live-dot { animation: pulse-dot 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    </style>
 </head>
-<body class="bg-gray-100 p-8">
-    <div class="max-w-6xl mx-auto">
-        <h1 class="text-3xl font-bold mb-6 text-gray-800">Log Akses Kendaraan</h1>
-        
-        <div class="bg-white shadow-md rounded-lg overflow-hidden">
-            <table class="min-w-full leading-normal">
-                <thead>
-                    <tr class="bg-blue-600 text-white">
-                        <th class="px-5 py-3 border-b-2 text-left text-xs font-semibold uppercase tracking-wider">Nama</th>
-                        <th class="px-5 py-3 border-b-2 text-left text-xs font-semibold uppercase tracking-wider">NIM</th>
-                        <th class="px-5 py-3 border-b-2 text-left text-xs font-semibold uppercase tracking-wider">Plat Nomor</th>
-                        <th class="px-5 py-3 border-b-2 text-left text-xs font-semibold uppercase tracking-wider">Jam Masuk</th>
-                        <th class="px-5 py-3 border-b-2 text-left text-xs font-semibold uppercase tracking-wider">Jam Keluar</th>
-                    </tr>
-                </thead>
-                <tbody id="data-tabel">
-                    </tbody>
-            </table>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
+
+    <header class="bg-slate-800 border-b border-slate-700 p-6 shadow-md">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-blue-400 tracking-wider">SISTEM OTOMASI PARKIR IOT</h1>
+                <p class="text-sm text-slate-400 mt-1">Laboratorium Kendali & SCADA - <span class="font-bold text-yellow-400">Politeknik Negeri Semarang</span></p>
+            </div>
+            <div class="flex items-center gap-2 bg-slate-900 px-4 py-2 rounded-full border border-slate-700">
+                <div class="w-3 h-3 bg-green-500 rounded-full live-dot"></div>
+                <span class="text-sm font-medium text-green-400">System Online</span>
+            </div>
         </div>
-    </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
+        
+        <div class="bg-slate-800 rounded-xl p-6 shadow-lg border border-slate-700 lg:col-span-1 h-fit">
+            <h2 class="text-xl font-semibold mb-4 text-white border-b border-slate-600 pb-2">Verifikasi & Daftar RFID</h2>
+            <p class="text-sm text-slate-400 mb-6">Tap kartu pada reader (USB) atau input manual untuk mendaftarkan akses kendaraan.</p>
+            
+            <form id="rfidForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-1">UID RFID</label>
+                    <input type="text" id="rfid_id" required placeholder="Tap kartu..." class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-1">Plat Nomor</label>
+                    <input type="text" id="plat_nomor" required placeholder="Contoh: H 1234 AB" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white uppercase focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-1">Nama Pemilik</label>
+                    <input type="text" id="nama" required placeholder="Nama Mahasiswa/Dosen" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 rounded-lg transition-colors mt-2">
+                    Daftarkan Akses
+                </button>
+            </form>
+            <div id="alertBox" class="mt-4 hidden p-3 rounded text-sm font-medium"></div>
+        </div>
+
+        <div class="bg-slate-800 rounded-xl p-6 shadow-lg border border-slate-700 lg:col-span-2">
+            <div class="flex justify-between items-center border-b border-slate-600 pb-2 mb-4">
+                <h2 class="text-xl font-semibold text-white">Live Monitoring Gate</h2>
+                <span class="text-xs bg-slate-700 text-slate-300 px-2 py-1 rounded">Update Real-time via Supabase</span>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-900 text-slate-300 text-sm uppercase tracking-wide">
+                            <th class="p-3 rounded-tl-lg">Waktu</th>
+                            <th class="p-3">UID RFID</th>
+                            <th class="p-3">Status Palang</th>
+                            <th class="p-3 rounded-tr-lg">Keterangan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logTableBody" class="divide-y divide-slate-700 text-sm">
+                        <tr>
+                            <td colspan="4" class="p-4 text-center text-slate-500">Memuat data realtime...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
 
     <script>
- 
-        // Konfigurasi Supabase
-       const supabaseUrl = process.env.SUPABASE_URL;
-        const supabaseKey = process.env.SUPABASE_ANON_KEY;
-        if (!supabaseUrl || !supabaseKey) {
-    console.error("❌ Error: SUPABASE_URL atau SUPABASE_ANON_KEY belum di-set di file .env");
-    process.exit(1);
-}
+        // === INISIALISASI SUPABASE ===
+        const SUPABASE_URL = 'URL_SUPABASE_KAMU'; // GANTI INI
+        const SUPABASE_KEY = 'KEY_ANON_SUPABASE_KAMU'; // GANTI INI
         const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        async function fetchLogs() {
-            let { data, error } = await supabase
-                .from('log_parkir')
+        // Referensi Elemen DOM
+        const form = document.getElementById('rfidForm');
+        const alertBox = document.getElementById('alertBox');
+        const logTableBody = document.getElementById('logTableBody');
+
+        // Fungsi Tampilkan Alert
+        function showAlert(msg, isSuccess) {
+            alertBox.textContent = msg;
+            alertBox.className = `mt-4 p-3 rounded text-sm font-medium block ${isSuccess ? 'bg-green-900/50 text-green-400 border border-green-800' : 'bg-red-900/50 text-red-400 border border-red-800'}`;
+            setTimeout(() => alertBox.classList.add('hidden'), 5000);
+        }
+
+        // === 1. INSERT DATA (PENDAFTARAN RFID) ===
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const rfid_id = document.getElementById('rfid_id').value;
+            const plat_nomor = document.getElementById('plat_nomor').value.toUpperCase();
+            const nama = document.getElementById('nama').value;
+
+            // Masukkan ke tabel 'members'
+            const { data, error } = await supabase
+                .from('members')
+                .insert([{ rfid_id, plat_nomor, nama }]);
+
+            if (error) {
+                console.error(error);
+                showAlert('Gagal mendaftar. RFID atau Plat mungkin sudah ada.', false);
+            } else {
+                showAlert('Akses RFID & Plat berhasil diverifikasi dan disimpan!', true);
+                form.reset();
+                document.getElementById('rfid_id').focus(); // Fokus kembali ke input RFID
+            }
+        });
+
+        // === 2. BACA DATA AWAL (INITIAL FETCH LOGS) ===
+        async function fetchInitialLogs() {
+            const { data, error } = await supabase
+                .from('parking_logs')
                 .select('*')
-                .order('jam_masuk', { ascending: false });
+                .order('id', { ascending: false })
+                .limit(5);
 
-            if (error) console.log('Error:', error);
-            else renderTable(data);
+            if (data && data.length > 0) {
+                logTableBody.innerHTML = '';
+                data.forEach(log => renderLogRow(log));
+            } else {
+                logTableBody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-500">Belum ada aktivitas hari ini.</td></tr>';
+            }
         }
 
-        function renderTable(logs) {
-            const tbody = document.getElementById('data-tabel');
-            tbody.innerHTML = '';
-            logs.forEach(log => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">${log.nama}</td>
-                        <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">${log.nim}</td>
-                        <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">${log.plat_nomor}</td>
-                        <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">${new Date(log.jam_masuk).toLocaleString('id-ID')}</td>
-                        <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">${log.jam_keluar ? new Date(log.jam_keluar).toLocaleString('id-ID') : '-'}</td>
-                    </tr>
-                `;
-            });
+        // Fungsi Render Baris Tabel
+        function renderLogRow(log) {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-slate-800/50 transition-colors';
+            
+            // Format waktu ISO ke lokal
+            const timeRaw = log.time_out ? log.time_out : log.time_in;
+            const timeFormatted = new Date(timeRaw).toLocaleTimeString('id-ID', { hour12: false });
+            
+            // Badge Status
+            const statusBadge = log.status === 'IN' 
+                ? '<span class="px-2 py-1 bg-blue-900/50 text-blue-400 rounded text-xs font-bold border border-blue-800">GATE IN (UHF)</span>'
+                : '<span class="px-2 py-1 bg-purple-900/50 text-purple-400 rounded text-xs font-bold border border-purple-800">GATE OUT (OCR+TAG)</span>';
+
+            row.innerHTML = `
+                <td class="p-3 text-slate-300 font-mono">${timeFormatted}</td>
+                <td class="p-3 font-mono text-yellow-400">${log.rfid_id}</td>
+                <td class="p-3">${statusBadge}</td>
+                <td class="p-3 text-slate-400">${log.status === 'IN' ? 'Masuk area parkir' : 'Telah diverifikasi kamera'}</td>
+            `;
+            // Insert di urutan paling atas
+            logTableBody.insertBefore(row, logTableBody.firstChild);
         }
 
-        // Jalankan fungsi saat web dibuka
-        fetchLogs();
-        
-        // Update otomatis setiap 5 detik
-        setInterval(fetchLogs, 5000);
+        // === 3. REALTIME SUBSCRIPTION (SCADA ENGINE) ===
+        // Supabase channel untuk mendengarkan perubahan tabel parking_logs
+        supabase.channel('custom-all-channel')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'parking_logs' }, (payload) => {
+                console.log('Kendaraan Masuk (Realtime):', payload.new);
+                // Jika tadinya kosong, hapus pesan "Belum ada aktivitas"
+                if(logTableBody.textContent.includes('Belum ada aktivitas')) logTableBody.innerHTML = '';
+                renderLogRow(payload.new);
+            })
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'parking_logs' }, (payload) => {
+                console.log('Kendaraan Keluar (Realtime Update):', payload.new);
+                renderLogRow(payload.new); // Render ulang data yang di-update ke status OUT
+            })
+            .subscribe();
+
+        // Jalankan fetch awal saat web diload
+        fetchInitialLogs();
     </script>
 </body>
 </html>
